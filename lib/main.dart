@@ -1,14 +1,14 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:typed_data';
+import 'package:bc108/datalink/write/command_factory.dart';
+import 'package:rxdart/rxdart.dart';
 
-import 'package:bluetooth_demo/bytes_builder.dart';
-import 'package:bluetooth_demo/crc.dart';
+import 'package:bc108/datalink/operator.dart';
+import 'package:bc108/datalink/read/reader.dart';
+import 'package:bc108/datalink/utils/bytes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
-
-import 'bytes.dart';
 
 void main() {
   runApp(MyApp());
@@ -39,28 +39,11 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final _devices = Set<BluetoothDevice>();
   final _bondedDevices = Set<BluetoothDevice>();
-  BluetoothState _state = BluetoothState.UNKNOWN;
-  StreamSubscription<BluetoothDiscoveryResult> _discoverySubscription;
+  final _console = StringBuffer();
   BluetoothConnection _connection;
 
-  _MyHomePageState() {
-    _bluetoothStateCallback((event) {
-      setState(() {
-        this._state = event;
-      });
-    });
-  }
-
-  void _bluetoothStateCallback(Function(BluetoothState) callback) {
-    FlutterBluetoothSerial.instance.state.then((state) {
-      callback(state);
-    });
-    FlutterBluetoothSerial.instance.onStateChanged().listen((state) {
-      callback(state);
-    });
-  }
+  _MyHomePageState();
 
   bool _canRefreshBonded = true;
   void _refreshBonded() async {
@@ -79,20 +62,78 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  bool _canRefreshDiscovered = true;
-  void _refreshDiscovered() async {
+  Operator _operator;
+
+  void _connect(BluetoothDevice device) async {
+    print('tapped into ${device.name}');
+    if (_connection != null) await _connection.close();
+    final connection = await BluetoothConnection.toAddress(device.address)
+        .timeout(Duration(seconds: 5));
     setState(() {
-      _canRefreshDiscovered = false;
+      _connection = connection;
+      _console.clear();
     });
+    // final input = _connection.input.asBroadcastStream();
+    // input.listen((bytes) {
+    //   final sb = StringBuffer();
+    //   sb.write('RECV: ');
+    //   bytes.forEach((b) {
+    //     sb.write(b.charRepresentation);
+    //   });
+    //   sb.writeln();
+    //   setState(() {
+    //     _console.write(sb.toString());
+    //   });
+    // });
+
+    final stream =
+        connection.input.flatMap((x) => Stream.fromIterable(x)).asEventReader();
+    // ignore: close_sinks
+    final newController = StreamController<int>();
+    final newOutputStream = newController.stream
+        .bufferTime(Duration(milliseconds: 15))
+        .map((x) => Uint8List.fromList(x));
+    connection.output.addStream(newOutputStream);
+    // ignore: close_sinks
+    final sink = newController.sink;
+
+    if (_operator != null) _operator.close();
+    _operator = Operator.fromStreamAndSink(stream, sink);
+
+    _refreshBonded();
+  }
+
+  void _transmitData() async {
     setState(() {
-      _devices.clear();
+      _console.clear();
     });
-    FlutterBluetoothSerial.instance.startDiscovery().listen((event) {
-      _devices.add(event.device);
-    });
+    if (_operator == null) {
+      setState(() {
+        _console.writeln("⚠ Operator is null ⚠");
+      });
+      return;
+    }
+
+    final cf = CommandFactory();
     setState(() {
-      _canRefreshDiscovered = true;
+      _console.writeln("▶ Sending PP_GetInfo(00)");
     });
+    final result = await _operator.execute(cf.getInfo(0));
+    if (result.aborted) {
+      setState(() {
+        _console.writeln("🛑 Aborted: ${result.abortMessage}");
+      });
+    } else if (result.timeout) {
+      setState(() {
+        _console.writeln("⌛ Timeout");
+      });
+    } else if (result.isDataResult) {
+      setState(() {
+        _console.writeln("🎲 Data: ${result.data}");
+      });
+    } else {
+      _console.writeln("⁉ Invalid result");
+    }
   }
 
   @override
@@ -103,41 +144,21 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: Column(
         children: [
-          StatefulBuilder(
-            builder: (ctx, snap) {
-              return ListTile(
-                title: Text('Connection State'),
-                subtitle: Text(_state.toString()),
-              );
-            },
-          ),
-          Divider(),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              children: [
-                Expanded(child: Text('Discovered Devices')),
-                RaisedButton(
-                  child: Row(
-                    children: [
-                      Icon(Icons.refresh),
-                      Text(' Refresh'),
-                    ],
-                  ),
-                  onPressed: !_canRefreshDiscovered ? null : _refreshDiscovered,
-                ),
-              ],
-            ),
-          ),
           Expanded(
-            child: ListView.builder(
-              itemCount: _devices.length,
-              itemBuilder: (ctx, idx) {
-                return ListTile(
-                  title: Text('device 01'),
-                  subtitle: Text('strength 01'),
-                );
-              },
+            child: Container(
+              padding: EdgeInsets.all(4),
+              width: double.infinity,
+              color: Colors.black87,
+              child: SingleChildScrollView(
+                child: Text(
+                  _console.toString(),
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 10,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
             ),
           ),
           Divider(),
@@ -172,17 +193,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             : FontWeight.normal),
                   ),
                   subtitle: Text(device.address),
-                  onTap: () async {
-                    print('tapped into ${device.name}');
-                    if (_connection != null) await _connection.close();
-                    final connection =
-                        await BluetoothConnection.toAddress(device.address)
-                            .timeout(Duration(seconds: 5));
-                    setState(() {
-                      _connection = connection;
-                    });
-                    _refreshBonded();
-                  },
+                  onTap: () => _connect(device),
                 );
               },
             ),
@@ -192,10 +203,7 @@ class _MyHomePageState extends State<MyHomePage> {
             children: [
               RaisedButton(
                 child: Text('Transmit Data'),
-                onPressed: () {
-                  final data = _buildData
-                  _connection.output.add(data);
-                },
+                onPressed: _transmitData,
               ),
             ],
           ),
