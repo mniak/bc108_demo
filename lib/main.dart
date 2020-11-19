@@ -153,16 +153,16 @@ class _MyHomePageState extends State<MyHomePage> {
     //   _console.writeln("\n🛑 Load end status: ${loadEnd.status}");
     // });
 
-    // final timestamp = await _pinpad.getTimestamp(GetTimestampRequest(3));
-    // setState(() {
-    //   _console.writeln("🕓 Timestamp: ${timestamp.status}");
-    // });
+    final timestamp = await _pinpad.getTimestamp(GetTimestampRequest(3));
+    setState(() {
+      _console.writeln("🕓 Timestamp: ${timestamp.status}");
+    });
 
-    // final display = await _pinpad.display(
-    //     DisplayRequest("Tabs Atualizadas!", "TS: ${timestamp.data.timestamp}"));
-    // setState(() {
-    //   _console.writeln("📺 Display: ${display.status}");
-    // });
+    final display = await _pinpad.display(
+        DisplayRequest("Tabs Atualizadas!", "TS: ${timestamp.data.timestamp}"));
+    setState(() {
+      _console.writeln("📺 Display: ${display.status}");
+    });
 
     // final startGetCard = await _pinpad.startGetCard(StartGetCardRequest()
     //   ..acquirer = 3
