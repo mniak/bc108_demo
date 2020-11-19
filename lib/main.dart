@@ -11,7 +11,6 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -69,21 +68,9 @@ class _MyHomePageState extends State<MyHomePage> {
       _connection = connection;
       _console.clear();
     });
-    // final input = _connection.input.asBroadcastStream();
-    // input.listen((bytes) {
-    //   final sb = StringBuffer();
-    //   sb.write('RECV: ');
-    //   bytes.forEach((b) {
-    //     sb.write(b.charRepresentation);
-    //   });
-    //   sb.writeln();
-    //   setState(() {
-    //     _console.write(sb.toString());
-    //   });
-    // });
 
-    final stream =
-        connection.input.flatMap((x) => Stream.fromIterable(x)).asEventReader();
+    final stream = connection.input.flatMap((x) => Stream.fromIterable(x));
+
     // ignore: close_sinks
     final newController = StreamController<int>();
     final newOutputStream = newController.stream
@@ -142,23 +129,29 @@ class _MyHomePageState extends State<MyHomePage> {
 
     for (var rec in records) {
       final loadRec = await _pinpad.tableLoadRec(TableLoadRecRequest([rec]));
-      setState(() {
-        _console.writeln("🎈 Load rec status: ${loadRec.status}");
-      });
+      if (loadRec.status == Status.PP_OK) {
+        setState(() {
+          _console.write(".");
+        });
+      } else {
+        setState(() {
+          _console.writeln("\n🎈 Load rec status: ${loadRec.status}");
+        });
+      }
     }
 
     final loadEnd = await _pinpad.tableLoadEnd();
     setState(() {
-      _console.writeln("🛑 Load end status: ${loadEnd.status}");
+      _console.writeln("\n🛑 Load end status: ${loadEnd.status}");
     });
 
     final timestamp = await _pinpad.getTimestamp(GetTimestampRequest(3));
     setState(() {
-      _console.writeln("🕓 Timestamp: ${loadEnd.status}");
+      _console.writeln("🕓 Timestamp: ${timestamp.status}");
     });
 
-    final display = await _pinpad
-        .display(DisplayRequest("Feito!", "TS: ${timestamp.data.timestamp}"));
+    final display = await _pinpad.display(
+        DisplayRequest("Tabs Atualizadas!", "TS: ${timestamp.data.timestamp}"));
     setState(() {
       _console.writeln("📺 Display: ${display.status}");
     });
