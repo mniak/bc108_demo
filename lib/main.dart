@@ -164,15 +164,15 @@ class _MyHomePageState extends State<MyHomePage> {
     //   _console.writeln("📺 Display: ${display.status}");
     // });
 
-    final startGetCard = await _pinpad.startGetCard(StartGetCardRequest()
-      ..acquirer = 3
-      ..amount = 150
-      ..date = "201119"
-      ..time = "144200"
-      ..timestamp = TIMESTAMP);
-    setState(() {
-      _console.writeln("Start get card: ${startGetCard.status}");
-    });
+    // final startGetCard = await _pinpad.startGetCard(StartGetCardRequest()
+    //   ..acquirer = 3
+    //   ..amount = 150
+    //   ..date = "201119"
+    //   ..time = "144200"
+    //   ..timestamp = TIMESTAMP);
+    // setState(() {
+    //   _console.writeln("Start get card: ${startGetCard.status}");
+    // });
 
     // final getCard = await _pinpad.getCard();
     // setState(() {
