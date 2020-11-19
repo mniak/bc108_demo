@@ -24,8 +24,7 @@ dependencies:
   flutter:
     sdk: flutter
   bc108:
-     path: Z:\Projects\Braspag\Canais\pinpad
-  # bc108: ^0.1.1
+     path: ..\pinpad
   flutter_bluetooth_serial: ^0.2.2
   rxdart: ^0.24.1
 
