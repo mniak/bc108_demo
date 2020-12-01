@@ -196,14 +196,27 @@ class _MyHomePageState extends State<MyHomePage> {
       _console.writeln("📺 Display: ${display2.status}");
     });
 
+    final amount = 150;
     final getCard = await _pinpad.getCard(GetCardRequest()
       ..acquirer = 3
-      ..amount = 150
+      ..amount = amount
       ..datetime = DateTime.now()
       ..timestamp = timestamp.data.timestamp);
     setState(() {
       _console.writeln(
           "Get card: ${getCard.status} ${getCard.data.cardHolderName} ${getCard.data.pan}");
+    });
+
+    final goOnChip = await _pinpad.goOnChip(GoOnChipRequest()
+      ..amount = amount
+      ..requireOnlineAuthorization = true
+      ..requirePin = true
+      ..encryptionMode = EncryptionMode.Dukpt3Des
+      ..keyIndex = 7
+      ..tags = ["9F27", "9F26", "95", "9B", "9F34", "9F10"]
+      ..optionalTags = ["5F20", "5F28"]);
+    setState(() {
+      _console.writeln("Go on chip: ${goOnChip.data.decision}");
     });
 
     final close = await _pinpad.close(CloseRequest("LINE1", "LINE2"));
