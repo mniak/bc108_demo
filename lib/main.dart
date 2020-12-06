@@ -190,13 +190,13 @@ class _MyHomePageState extends State<MyHomePage> {
       _console.writeln("🕓 Timestamp: ${timestamp.status}");
     });
 
-    final display2 = await _pinpad.display(
-        DisplayRequest("Tabs Atualizadas!", "TS: ${timestamp.data.timestamp}"));
-    setState(() {
-      _console.writeln("📺 Display: ${display2.status}");
-    });
+    // final display2 = await _pinpad.display(
+    //     DisplayRequest("Tabs Atualizadas!", "TS: ${timestamp.data.timestamp}"));
+    // setState(() {
+    //   _console.writeln("📺 Display: ${display2.status}");
+    // });
 
-    final amount = 150;
+    final amount = 3;
     final getCard = await _pinpad.getCard(GetCardRequest()
       ..acquirer = 3
       ..amount = amount
@@ -212,14 +212,49 @@ class _MyHomePageState extends State<MyHomePage> {
       ..requireOnlineAuthorization = true
       ..requirePin = true
       ..encryptionMode = EncryptionMode.Dukpt3Des
-      ..keyIndex = 7
+      ..keyIndex = 1
       ..tags = ["9F27", "9F26", "95", "9B", "9F34", "9F10"]
       ..optionalTags = ["5F20", "5F28"]);
+
+    final authMethod = () {
+      if (goOnChip.data.pinValidatedOffline) return "OfflineAuthentication";
+
+      if (!goOnChip.data.pinValidatedOffline &&
+          !goOnChip.data.pinCapturedForOnlineValidation)
+        return "OfflineAuthentication";
+
+      if (!goOnChip.data.pinValidatedOffline &&
+          goOnChip.data.pinCapturedForOnlineValidation)
+        return "OnlineAuthentication";
+    }();
+
     setState(() {
-      _console.writeln("Go on chip: ${goOnChip.data.decision}");
+      _console.writeln(
+          "Go on chip: ${goOnChip.data.decision} ${goOnChip.data.tags.raw} $authMethod");
     });
 
-    final close = await _pinpad.close(CloseRequest("LINE1", "LINE2"));
+TlvMap tags = TlvMap{
+"91": BinaryData.fromHex("330D56C80029FC3A"),
+};
+
+    final finishChip = await _pinpad.finishChip(FinishChipRequest()
+..status    = CommunicationStatus.Successful
+..issuerType                 = IssuerType.EmvFullGrade
+..authorizationResponseCode  = "00"
+..tags                       = ,
+..requiredTagsList                    = ""
+    ..);
+    setState(() {
+      _console.writeln("Finish chip: ${finishChip.status}");
+    });
+
+    final removeCard = await _pinpad
+        .removeCard(RemoveCardRequest("Por favor", " remova o cartao"));
+    setState(() {
+      _console.writeln("Remove card: ${removeCard.status}");
+    });
+
+    final close = await _pinpad.close(CloseRequest("Pinpad", "Fechado"));
     setState(() {
       _console.writeln("Close: ${close.status}");
     });
