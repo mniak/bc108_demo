@@ -233,17 +233,16 @@ class _MyHomePageState extends State<MyHomePage> {
           "Go on chip: ${goOnChip.data.decision} ${goOnChip.data.tags.raw} $authMethod");
     });
 
-TlvMap tags = TlvMap{
-"91": BinaryData.fromHex("330D56C80029FC3A"),
-};
+    TlvMap tags = TlvMap.fromMap({
+      "91": BinaryData.fromHex("330D56C80029FC3A"),
+    });
 
     final finishChip = await _pinpad.finishChip(FinishChipRequest()
-..status    = CommunicationStatus.Successful
-..issuerType                 = IssuerType.EmvFullGrade
-..authorizationResponseCode  = "00"
-..tags                       = ,
-..requiredTagsList                    = ""
-    ..);
+      ..status = CommunicationStatus.Successful
+      ..issuerType = IssuerType.EmvFullGrade
+      ..authorizationResponseCode = "00"
+      ..tags = tags
+      ..requiredTagsList = []);
     setState(() {
       _console.writeln("Finish chip: ${finishChip.status}");
     });
