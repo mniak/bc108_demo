@@ -238,7 +238,7 @@ class _MyHomePageState extends State<MyHomePage> {
     }, "");
 
     final finishChip = await _pinpad.finishChip(FinishChipRequest()
-      ..status = CommunicationStatus.Successful
+      ..status = CommunicationStatus.Success
       ..issuerType = IssuerType.EmvFullGrade
       ..authorizationResponseCode = "00"
       ..tags = tags
