@@ -59,7 +59,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Pinpad _pinpad;
 
-  void _connect(BluetoothDevice device) async {
+  void _connect(BuildContext ctx, BluetoothDevice device) async {
     print('tapped into ${device.name}');
     if (_connection != null) await _connection.close();
     final connection = await BluetoothConnection.toAddress(device.address)
@@ -90,9 +90,13 @@ class _MyHomePageState extends State<MyHomePage> {
     if (_pinpad != null) _pinpad.done();
     _pinpad = Pinpad.fromStreamAndSink(stream, sink);
     _pinpad.notifications.listen((message) {
-      setState(() {
-        _console.writeln("📩 $message");
-      });
+      ScaffoldMessenger.of(ctx).hideCurrentSnackBar();
+      ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+        content: Text(message),
+      ));
+      // setState(() {
+      //   _console.writeln("📩 $message");
+      // });
     });
 
     _refreshBonded();
@@ -204,48 +208,53 @@ class _MyHomePageState extends State<MyHomePage> {
       ..timestamp = timestamp.data.timestamp);
     setState(() {
       _console.writeln(
-          "Get card: ${getCard.status} ${getCard.data.cardHolderName} ${getCard.data.pan}");
+          "Get card: ${getCard.status} ${getCard.data?.cardHolderName} ${getCard.data?.pan}");
     });
 
-    final goOnChip = await _pinpad.goOnChip(GoOnChipRequest()
-      ..amount = amount
-      ..requireOnlineAuthorization = true
-      ..requirePin = true
-      ..encryptionMode = EncryptionMode.Dukpt3Des
-      ..keyIndex = 1
-      ..tags = ["9F27", "9F26", "95", "9B", "9F34", "9F10"]
-      ..optionalTags = ["5F20", "5F28"]);
+    if (getCard.status == Status.PP_OK) {
+      final goOnChip = await _pinpad.goOnChip(GoOnChipRequest()
+        ..amount = amount
+        ..requireOnlineAuthorization = true
+        ..requirePin = true
+        ..encryptionMode = EncryptionMode.Dukpt3Des
+        ..keyIndex = 1
+        ..tags = ["9F27", "9F26", "95", "9B", "9F34", "9F10"]
+        ..optionalTags = ["5F20", "5F28"]);
 
-    final authMethod = () {
-      if (goOnChip.data.pinValidatedOffline) return "OfflineAuthentication";
+      final authMethod = () {
+        if (goOnChip?.data == null) return null;
+        if (goOnChip.data.pinValidatedOffline) return "OfflineAuthentication";
 
-      if (!goOnChip.data.pinValidatedOffline &&
-          !goOnChip.data.pinCapturedForOnlineValidation)
-        return "OfflineAuthentication";
+        if (!goOnChip.data.pinValidatedOffline &&
+            !goOnChip.data.pinCapturedForOnlineValidation)
+          return "OfflineAuthentication";
 
-      if (!goOnChip.data.pinValidatedOffline &&
-          goOnChip.data.pinCapturedForOnlineValidation)
-        return "OnlineAuthentication";
-    }();
+        if (!goOnChip.data.pinValidatedOffline &&
+            goOnChip.data.pinCapturedForOnlineValidation)
+          return "OnlineAuthentication";
+      }();
 
-    setState(() {
-      _console.writeln(
-          "Go on chip: ${goOnChip.data.decision} ${goOnChip.data.tags.raw} $authMethod");
-    });
+      setState(() {
+        _console.writeln(
+            "Go on chip: ${goOnChip.data?.decision} ${goOnChip.data?.tags?.raw} $authMethod");
+      });
 
-    TlvMap tags = TlvMap({
-      "91": BinaryData.fromHex("330D56C80029FC3A"),
-    }, "");
+      if (goOnChip.status == Status.PP_OK) {
+        TlvMap tags = TlvMap({
+          "91": BinaryData.fromHex("330D56C80029FC3A"),
+        }, "");
 
-    final finishChip = await _pinpad.finishChip(FinishChipRequest()
-      ..status = CommunicationStatus.Success
-      ..issuerType = IssuerType.EmvFullGrade
-      ..authorizationResponseCode = "00"
-      ..tags = tags
-      ..requiredTagsList = []);
-    setState(() {
-      _console.writeln("Finish chip: ${finishChip.status}");
-    });
+        final finishChip = await _pinpad.finishChip(FinishChipRequest()
+          ..status = CommunicationStatus.Success
+          ..issuerType = IssuerType.EmvFullGrade
+          ..authorizationResponseCode = "00"
+          ..tags = tags
+          ..requiredTagsList = []);
+        setState(() {
+          _console.writeln("Finish chip: ${finishChip.status}");
+        });
+      }
+    }
 
     final removeCard = await _pinpad
         .removeCard(RemoveCardRequest("Por favor", " remova o cartao"));
@@ -316,7 +325,7 @@ class _MyHomePageState extends State<MyHomePage> {
                             : FontWeight.normal),
                   ),
                   subtitle: Text(device.address),
-                  onTap: () => _connect(device),
+                  onTap: () => _connect(ctx, device),
                 );
               },
             ),
