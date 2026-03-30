@@ -26,8 +26,8 @@ dependencies:
   bc108:
      path: ../bc108
   # bc108: ^0.1.4
-  flutter_bluetooth_serial: ^0.2.2
-  rxdart: ^0.24.1
+  flutter_bluetooth_serial: ^0.4.0
+  rxdart: ^0.28.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
